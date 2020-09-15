@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dev-mongo-graylog
+  labels:
+    app: dev-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dev-mongo
+  template:
+    metadata:
+      labels:
+        app: dev-mongo
+    spec:
+      containers:
+      - name: dev-mongo
+        image: mongo:3
+        ports:
+        - containerPort: 27017
+
+---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      service: dev-mongo
+    name: dev-mongo
+  spec:
+    type: ClusterIP
+    ports:
+    - name: dev-mongo-port
+      port: 27017
+      targetPort: 27017
+    selector:
+      app: dev-mongo

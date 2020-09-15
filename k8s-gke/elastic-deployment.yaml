@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dev-es-graylog
+  labels:
+    app: dev-es-graylog
+spec:
+  serviceName: dev-es-graylog
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dev-es-graylog
+  template:
+    metadata:
+      labels:
+        app: dev-es-graylog
+    spec:
+      volumes:
+        - name: elasticsearch-data
+          persistentVolumeClaim:
+            claimName: elasticsearch-data
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.10
+        resources:
+            limits:
+              cpu: 1000m
+            requests:
+              cpu: 100m
+        volumeMounts:
+          - name: elasticsearch-data
+            mountPath: /usr/share/elasticsearch/data
+            readOnly: false
+        ports:
+        - containerPort: 9200
+        env:
+          - name: http.host
+            value: 0.0.0.0
+          - name: ES_JAVA_OPTS
+            value: "-Xms128m -Xmx128m"
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.26.2
+          command: ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+          - name: elasticsearch-data
+            mountPath: /usr/share/elasticsearch/data  
+        - command:
+          - sh
+          - -c
+          - sysctl -w vm.max_map_count=262144
+          name: set-max-map-count
+          image: busybox:1.26.2
+          securityContext:
+            privileged: true
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: dev-es-graylog
+  name: dev-es-graylog
+spec:
+  type: ClusterIP
+  ports:
+  - name: es-port
+    port: 9200
+    targetPort: 9200
+  selector:
+    app: dev-es-graylog

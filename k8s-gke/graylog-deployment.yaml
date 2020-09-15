@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dev-graylog
+  labels:
+    app: dev-graylog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dev-graylog
+  template:
+    metadata:
+      labels:
+        app: dev-graylog
+    spec:
+      containers:
+      - name: dev-graylog
+        image: graylog/graylog:3.3
+        ports:
+        - containerPort: 1514
+        - containerPort: 9000
+        - containerPort: 12201
+        env:
+          - name: GRAYLOG_HTTP_EXTERNAL_URI
+            value: http://<LOAD_BALANCER_IP>:9000/
+          - name: GRAYLOG_ELASTICSEARCH_HOSTS
+            value: http://dev-es-graylog:9200
+          - name: GRAYLOG_MONGODB_URI
+            value: mongodb://dev-mongo:27017/graylog
+
+---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      service: dev-graylog
+    name: dev-graylog
+  spec:
+    type: LoadBalancer
+    ports:
+    - name: "9000"
+      port: 9000
+      targetPort: 9000
+      # nodePort: 30003
+    - name: "12201"
+      port: 12201
+      targetPort: 12201
+      # nodePort: 30004
+    selector:
+      app: dev-graylog
